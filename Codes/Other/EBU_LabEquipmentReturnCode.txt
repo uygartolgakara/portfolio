@@ -1,0 +1,181 @@
+Sub Return_Equipment()
+
+Dim active_cells As String
+active_cells = Selection.Address
+
+' Case 1: Single Cell - $C$3
+' Case 2: Multiple Rows Adjacent - $C$3:$C$7
+' Case 3: Multiple Cols Adjacent - $C$7:$E$7
+' Case 4: Multiple Rows and Cols Adjacent - $C$5:$E$7
+' Case 5: Multiple Non Adjacent Cells - $C$3,$D$5,$E$7
+' Case 6: Multiple Non Adjacent But Adjacent Rows - $B$2:$B$3,$C$4:$C$5,$D$6:$D$7
+' Case 7: Multiple Non Adjacent But Adjacent Cols - $B$2:$C$2,C$5$:D$5$,E$7$:F$7$
+' Case 8: Multiple Non Adjacent But Adjacent Rows and Cols - $A$2:B$3$,B$5$:D$6$,D$8$:E$10$
+' Case 9: Multiple Non Adjacent Cells and Groups - $A$2,$B$3:$B$4,$B$6:$C$6,C$8$:D$9$,$D$11,$E$13:$G$14
+
+Dim regex As Object
+Set regex = New RegExp
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' PreCase - Getting Full Name
+Dim username As String
+username = Application.username
+
+regex.Pattern = "(?:FIXED-TERM?)\s(.*)\s\(.*\)"
+Set Match = regex.Execute(username)
+
+Dim full_name As String
+full_name = Match(0).SubMatches(0)
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' PreCase - Getting Name and Surname
+regex.Pattern = "(.*?)\s(.*)"
+
+Dim name, surname As String
+Set Match = regex.Execute(full_name)
+surname = Match(0).SubMatches(0)
+name = Match(0).SubMatches(1)
+full_name = name & " " & surname ' We found the full name of the user
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' PreCase - Getting Date
+Dim date_time As String
+date_time = Date ' We found the date of recording
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' PreCase - Getting Target Column Indices
+Dim name_index, date_index As Integer
+name_index = Columns("H").Column
+date_index = Columns("G").Column
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' Case Work - Disecting Cell Selection Address(es)
+Dim ranges() As String
+ranges = Split(active_cells, ",")
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+Dim row_number As Integer
+Dim row_start, row_finish As Integer
+Dim col_start, col_finish As String
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' Case Work - Entering Main Loop for Address(es)
+Dim range As String
+For i = LBound(ranges()) To UBound(ranges())
+
+range = ranges(i)
+Count = Len(range) - Len(Replace(range, "$", "")) ' Count of $ characters in address
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' Case Work - Operations for Address Type 1: $B$3 or $BZ$35 or with bigger row numbers
+If Count = 2 Then
+
+regex.Pattern = "\$(?:[A-Z]{1,2})\$([0-9]+)"
+Set Match = regex.Execute(range)
+
+row_number = Match(0).SubMatches(0)
+
+Cells(row_number, name_index) = full_name
+Cells(row_number, name_index).HorizontalAlignment = xlCenter
+Cells(row_number, name_index).VerticalAlignment = xlCenter
+Cells(row_number, name_index).Font.Bold = True
+
+Cells(row_number, date_index) = date_time
+Cells(row_number, date_index).HorizontalAlignment = xlCenter
+Cells(row_number, date_index).VerticalAlignment = xlCenter
+Cells(row_number, date_index).Font.Bold = True
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' Case Work - Operations for Address Type 2: $B$3:$C$5 or $B$3:$BD$40 or with bigger row numbers
+ElseIf Count > 2 Then
+
+regex.Pattern = "\$([A-Z]{1,2})\$([0-9]+)\:\$([A-Z]{1,2})\$([0-9]+)"
+Set Match = regex.Execute(range)
+
+col_start = Match(0).SubMatches(0)
+col_finish = Match(0).SubMatches(2)
+
+row_start = Match(0).SubMatches(1)
+row_finish = Match(0).SubMatches(3)
+
+' First sub-type of this type of address (Adjacent rows)
+If col_start = col_finish Then
+For ii = row_start To row_finish
+    Cells(ii, name_index) = full_name
+    Cells(ii, name_index).HorizontalAlignment = xlCenter
+    Cells(ii, name_index).VerticalAlignment = xlCenter
+    Cells(ii, name_index).Font.Bold = True
+    
+    Cells(ii, date_index) = date_time
+    Cells(ii, date_index).HorizontalAlignment = xlCenter
+    Cells(ii, date_index).VerticalAlignment = xlCenter
+    Cells(ii, date_index).Font.Bold = True
+Next ii
+
+' Second sub-type of this type of address (Adjacent cols)
+ElseIf row_start = row_finish Then
+Cells(row_start, name_index) = full_name
+Cells(row_start, name_index).HorizontalAlignment = xlCenter
+Cells(row_start, name_index).VerticalAlignment = xlCenter
+Cells(row_start, name_index).Font.Bold = True
+
+Cells(row_start, date_index) = date_time
+Cells(row_start, date_index).HorizontalAlignment = xlCenter
+Cells(row_start, date_index).VerticalAlignment = xlCenter
+Cells(row_start, date_index).Font.Bold = True
+
+' Third sub-type of this type of address (Adjacent rows and cols)
+ElseIf col_start <> col_finish And row_start <> row_finish Then
+For ii = row_start To row_finish
+    Cells(ii, name_index) = full_name
+    Cells(ii, name_index).HorizontalAlignment = xlCenter
+    Cells(ii, name_index).VerticalAlignment = xlCenter
+    Cells(ii, name_index).Font.Bold = True
+    
+    Cells(ii, date_index) = date_time
+    Cells(ii, date_index).HorizontalAlignment = xlCenter
+    Cells(ii, date_index).VerticalAlignment = xlCenter
+    Cells(ii, date_index).Font.Bold = True
+Next ii
+End If
+
+'---------------------------------------------------------------------------------------------------------
+'-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-SECTIONBREAK-
+'---------------------------------------------------------------------------------------------------------
+
+' Error statement for new type of addresses
+Else
+MsgBox ("Please do not forget to select cell(s). After selecting, click on the button again.")
+
+
+End If
+Next i
+
+End Sub
